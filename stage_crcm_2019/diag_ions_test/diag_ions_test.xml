@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<tool id="diag_ions_test" name="Diagnostic Ions Test" version="1.0">
+    <description> Search diagnostic ions in MGF file </description>
+    <command><![CDATA[
+     R -q  -e 'rmarkdown::render("$__tool_directory__/diag_ions_test.rmd", "html_document", output_file = "$output_html", intermediates_dir = "/tmp", knit_root_dir = "/tmp" )' --args
+    $file
+    $tolerance
+    #if $input.listeMz == "file"
+        $input.file
+    #else
+        $input.txt
+    #end if
+        2>&1
+    ]]></command>
+    <inputs>
+        <param name="file"        type="data" format="txt,mgf" label="MGF file" help="Set of gene and background must have the same type ids"    ></param>
+        <param name="tolerance"   type="integer" value = "300" label="Tolerance of pics" ></param>
+        <conditional name="input" >
+            <param name="listeMz" type="select" label="Enter your MZ ratio" help="Copy/paste or from a file (e.g. table)" >
+                <option value="text">Copy/paste MZ</option>
+                <option value="file" selected="true">Input file
+                containing your MZ</option>
+            </param>
+            <when value="text" >
+                <param name="txt" type="text" label="Copy/paste your
+                m/z to search. Separate MZ with semicolon" help='Ex:
+                105.00704;144.87128 '></param>
+            </when>
+            <when value="file" >
+                <param name="file" type="data" format="txt" label="Choose a file containing m/z to search" help="" ></param>
+            </when>
+        </conditional>
+    </inputs>
+    <outputs>
+        <data format="html" name="output_html" label="${tool.name}" />
+    </outputs>
+    <help><![CDATA[
+
+**Description**
+
+
+This tool is based on R package MSnbase (Gatto L, Lilley K) and allows
+to find some pics (M/Z) in spectrums of MGF file.
+
+-----
+
+**Input**
+
+- MGF file
+- Tolerance (ppm)
+- M/Z ratio :
+    => whether a file containing M/Z ratio in one column (without a header)
+    => whether you can copy/paste some M/Z, each separated by a semicolon
+
+-----
+
+**Output**
+
+
+A HTML report with a table containing :
+- Resume about the spectrums in MGF file
+- Table and plots of spectrums containing M/Z wanted
+- Table  indicating shared diagnostic ions between spectrums
+- Heatmap
+
+
+-----
+
+
+**Authors**
+
+Author: Laurent Gatto, Johannes Rainer and Sebastian Gibb with contributions from Guangchuang Yu, Samuel Wieczorek, Vasile-Cosmin Lazar, Vladislav Petyuk, Thomas Naake, Richie Cotton, Arne Smits, Martina Fisher, Ludger Goeminne, Adriaan Sticker and Lieven Clement.
+
+Citation (from within R, enter citation("MSnbase")):
+
+Gatto L, Lilley K (2012). “MSnbase - an R/Bioconductor package for isobaric tagged mass spectrometry data visualization, processing and quantitation.” Bioinformatics, 28, 288-289.
+
+
+-----
+
+
+.. class:: infomark
+
+
+**Galaxy integration**
+
+    Ilyess RACHEDI, Samuel GRANJEAUD's student intern at
+    Centre de Recherche en Cancérologie de Marseille (CRCM), France
+    27 Boulevard Lei Roure, 13009 Marseille
+
+    ]]></help>
+</tool>
+

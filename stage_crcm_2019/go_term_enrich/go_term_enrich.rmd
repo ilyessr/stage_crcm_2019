@@ -1,0 +1,143 @@
+---
+title: "Go Term Enrichment"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: pygments
+    self_contained: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, echo = FALSE)
+```
+
+```{r Loading_variables, include = FALSE, message = FALSE, warning = FALSE }
+library(clusterProfiler)
+library(formattable)
+library(DT)
+library(tools)
+library(readxl)
+
+arg <- commandArgs(trailingOnly=TRUE)
+# arg <- c("/home/rachedi/Bureau/stage/galaxy/script_galaxy/gene_set_uniprot2.xls", "org.Hs.eg.db", "UNIPROT", "BP", 0.2, "BH", "/home/rachedi/Bureau/stage/galaxy/script_galaxy/bg_uniprot2.xls", 0.2, 10, 500, TRUE, "NA", 5, "ego_df.csv", FALSE, FALSE, 1, 1)
+
+header1 <- as.logical(arg[15])
+header2 <- as.logical(arg[16])
+file = arg[1]
+gene_data <- read_excel(file) 
+column_ID1 <- as.numeric(arg[17])
+column_ID2 <- as.numeric(arg[18])
+
+gene <- gene_data[,column_ID1, drop=TRUE]
+
+
+
+
+OrgDb   <- arg[2] # Required. Selection
+keyType <- arg[3] # Keytype of input gene
+ont     <- arg[4]    # Required. Selection. One of "MF", "BP", and "CC" subontologies.
+pvalueCutoff  <- as.numeric(arg[5])# Required. Float
+pAdjustMethod <- arg[6] # Selection. one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
+
+universe_data <- read_excel(arg[7])# Background genes. File. Optionnal
+universe <- universe_data[,column_ID2, drop=TRUE]
+
+
+
+qvalueCutoff  <- as.numeric(arg[8])  # Float qvalue cutoff
+minGSSize     <- as.numeric(arg[9])  # Integer. minimal size of genes annotated by Ontology term for testing
+maxGSSize     <- as.numeric(arg[10]) # Integer. maximal size of genes annotated for testing
+readable      <- as.logical(arg[11])  # True or False
+
+if (arg[12] == "NA") {
+    pool <-  NA
+    } else {
+    pool <- as.logical(arg[12])  # True or False
+    }
+
+showCategory <- as.numeric(arg[13])
+path_output   <- arg[14]
+```
+
+## GO over-representation
+```{r EnrichGo, include = FALSE}
+ego <- enrichGO(gene    = gene ,
+                OrgDb   = OrgDb,
+                keyType = keyType,
+                ont     = ont ,
+                pvalueCutoff  = pvalueCutoff,
+                pAdjustMethod = pAdjustMethod,
+                universe      = universe,
+                qvalueCutoff  = qvalueCutoff,
+                minGSSize = minGSSize,
+                maxGSSize = maxGSSize,
+                readable  = readable,
+                pool = pool)
+```
+
+
+```{r Write_table}
+ego_df = as.data.frame(ego)
+rownames(ego_df ) <- 1:nrow(ego_df)
+
+# Add column converting GeneRatio to decimal
+frac  <- ego_df$GeneRatio
+GenePercent <-sapply(frac, function(x) percent(eval(parse(text=as.character(x)))))
+# Add column converting BgRatio to decimal
+frac  <-  ego_df$BgRatio
+BgPercent <-sapply(frac, function(x) percent(eval(parse(text=as.character(x)))))
+## Bind these columns to the dataframe
+ego_df <- cbind(ego_df,GenePercent,BgPercent)
+# Change the order of the columns
+ego_df <- ego_df[,c("ID","Description","GeneRatio","BgRatio","GenePercent","BgPercent","pvalue", "p.adjust", "qvalue","Count","geneID")]
+# Round the decimals
+ego_df[,7:9] <- sapply(ego_df[,7:9], function(x) format(as.numeric(x),digits = 5))
+# Table
+datatable(ego_df,
+          class = "nowrap",
+          options = list(
+            searching = T,
+            scrollX = TRUE),
+         )
+# Write Csv version
+write.csv2(ego_df, path_output, row.names= F)
+
+# If user give number of catégorie to display bigger than the results
+if ( nrow(ego_df) < showCategory ){
+  showCategory <- nrow(ego_df)
+}
+```
+
+## Barplot
+```{r Barplot}
+barplot(ego, showCategory  = showCategory)
+```
+
+## Dotplot
+```{r Dotplot,  message =FALSE}
+dotplot(ego, color="pvalue" , showCategory  = showCategory)
+```
+
+
+## Heatmap-like functional classification
+```{r heatplot }
+heatplot(ego, showCategory = showCategory )
+```
+
+## Enrichment map
+```{r Emapplot}
+emapplot(ego, showCategory = showCategory)
+```
+
+## Gene-Concept Network
+```{r Cneplot}
+cnetplot(ego, showCategory = showCategory)
+```
+
+
+
+

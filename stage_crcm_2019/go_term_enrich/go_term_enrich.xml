@@ -1,0 +1,200 @@
+<?xml version="1.0"?>
+<tool id="go_term_enrich" name="GO over-representation" version="1.0">
+    <description> Compute GO over-representation </description>
+    <requirements>
+        <requirement type="package" version="3.5.3">R</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Hs.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Mm.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Rn.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Sc.sgd.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Dm.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Dr.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.At.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Ce.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Gg.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Cf.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Ss.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Ce.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Gg.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Cf.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Ss.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Mmu.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Xl.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Ag.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Pt.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.Pf.plasmo.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.EcK12.eg.db</requirement>
+        <requirement type="package" version="3.5.0">bioconductor-org.EcSakai.eg.db</requirement>
+        <requirement type="package" version="3.4.4">bioconductor-clusterprofiler</requirement>
+        <requirement type="package" version="2.7.2">pandoc</requirement>
+        <requirement type="package" version="0.5">DT</requirement>
+    </requirements>
+    <command><![CDATA[
+    R -q --vanilla -e 'rmarkdown::render("$__tool_directory__/go_term_enrich.rmd", "html_document", output_file = "$output2", intermediates_dir = "/tmp", knit_root_dir = "/tmp" )'
+    --args
+    $gene
+    $OrgDb
+    $keyType
+    $subont.ont
+    $pvalueCutoff
+    $pAdjustMethod
+    $universe
+    $qvalueCutoff
+    $minGSSize
+    $maxGSSize
+    $readable
+    #if $subont.ont == "ALL"
+        $subont.pool
+    #else
+        NA
+    #end if
+    $showCategory
+    $output1
+    $header1
+    $header2
+    $column_ID1
+    $column_ID2 2>&1
+    ]]></command>
+    <inputs>
+        <param name="gene"      type="data" format="xls,xlsx" label="Set of genes" help="xls or xlsx file. Set of gene and background must have the same type ids"     ></param>
+        <param name="header1" type="boolean" checked="FALSE" truevalue="TRUE" falsevalue="FALSE" label="Does file contain header?" />
+        <param name="column_ID1"   type="integer" value = "0" label="Index of the column containing the IDs" ></param>
+        <param name="universe"  type="data" format="xls,xlsx" label="Background genes" help="xls or xlsx file. Set of gene and background must have the same type ids"  ></param>
+        <param name="header2" type="boolean" checked="FALSE" truevalue="TRUE" falsevalue="FALSE" label="Does file contain header?" />
+        <param name="column_ID2"   type="integer" value = "0" label="Index of the column containing the IDs" ></param>
+        <param name="OrgDb" type="select" label="Organism" selected="">
+            <option value="org.Hs.eg.db"      >Homo sapiens</option>
+            <option value="org.Mm.eg.db"      >Mus musculus</option>
+            <option value="org.Rn.eg.db"      >Rattus norvegicus</option>
+            <option value="org.Sc.sgd.db"     >Saccharomyces cerevisiae</option>
+            <option value="org.Dm.eg.db"      >Drosophila melanogaster</option>
+            <option value="org.Dr.eg.db"      >Danio rerio</option>
+            <option value="org.At.eg.db"      >Arabidopsis thaliana</option>
+            <option value="org.Bt.eg.db"      >Bos taurus</option>
+            <option value="org.Ce.eg.db"      >Caenorhabditis elegans</option>
+            <option value="org.Gg.eg.db"      >Gallus gallus</option>
+            <option value="org.Cf.eg.db"      >Canis lupus familiaris</option>
+            <option value="org.Ss.eg.db"      >Sus scrofa</option>
+            <option value="org.Mmu.eg.db"     >Macaca mulatta</option>
+            <option value="org.Xl.eg.db"      >Xenopus laevis</option>
+            <option value="org.Ag.eg.db"      >Anopheles gambiae</option>
+            <option value="org.Pt.eg.db"      >Pan troglodytes</option>
+            <option value="org.Pf.plasmo.db"  >Plasmodium falciparum</option>
+            <option value="org.EcK12.eg.db"   >E.coli strain K12</option>
+            <option value="org.EcSakai.eg.db" >E.coli strain Sakai</option>
+        </param>
+        <param name="keyType" type="select" label="Keytype of input gene">
+            <option value="ACCNUM">ACCNUM</option>
+            <option value="ALIAS">ALIAS</option>
+            <option value="ENSEMBL">ENSEMBL</option>
+            <option value="ENSEMBLPROT">ENSEMBLPROT</option>
+            <option value="ENSEMBLTRANS">ENSEMBLTRANS</option>
+            <option value="ENTREZID"  >ENTREZID</option>
+            <option value="ENZYME">ENZYME</option>
+            <option value="EVIDENCE">EVIDENCE</option>
+            <option value="EVIDENCEALL">EVIDENCEALL</option>
+            <option value="GENENAME">GENENAME</option>
+            <option value="GO">GO</option>
+            <option value="GOALL">GOALL</option>
+            <option value="IPI">IPI</option>
+            <option value="ONTOLOGY">ONTOLOGY</option>
+            <option value="ONTOLOGYALL">ONTOLOGYALL</option>
+            <option value="PATH">PATH</option>
+            <option value="PFAM">PFAM</option>
+            <option value="PMID">PMID</option>
+            <option value="PROSITE">PROSITE</option>
+            <option value="REFSEQ">REFSEQ</option>
+            <option value="SYMBOL">SYMBOL</option>
+            <option value="UCSCKG">UCSCKG</option>
+            <option value="UNIGENE">UNIGENE</option>
+            <option value="UNIPROT"  selected="true" >UNIPROT</option>
+        </param>
+        <param name="readable"   type="boolean" checked="false" truevalue="T" falsevalue="F" label="Mapping gene ID to gene Name" />
+    <conditional name="subont">
+            <param name="ont" type="select"  label="Subontologie">
+                <option value="MF">Molecular Fonction</option>
+                <option value="BP">Biological Process</option>
+                <option value="CC">Cellular Component</option>
+                <option value="ALL">All</option>
+            </param>
+            <when value="ALL">
+                <param name="pool" type="boolean" checked="false" truevalue="TRUE" falsevalue="FALSE" label="Pool" />
+            </when>
+        </conditional>
+        <param name="showCategory"  type="integer" value="10" label="Size of category to show" help="Determine how many term categories to display on graphics"></param>
+        <param name="pvalueCutoff"  type="float" value="0.05" label="Pvalue cutoff" help="Correction of significativity cutoff "></param>
+        <param name="qvalueCutoff"  type="float" value="0.05" label="Qvalue cutoff" help="Qvalue cutoff "></param>
+        <param name="pAdjustMethod" type="select"  label="Multiple testing procedure (p-value adjustment)" selected="">
+            <option value="holm"      >Holm</option>
+            <option value="hochberg"  >Hochberg</option>
+            <option value="hommel"    >Hommel</option>
+            <option value="bonferroni">Bonferroni</option>
+            <option value="BH" selected="true"  >Benjamini-Hochberg</option>
+            <option value="BY"        >Benjamini-Yekutieli</option>
+            <option value="fdr"       >False Discovery Rate</option>
+            <option value="none"  >None</option>
+        </param>
+        <param name="minGSSize"  type="integer" value="10"   label="Display only GO terms with a minimum number of genes of :"   help="Minimal size of background genes annotated by Ontology for testing"></param>
+        <param name="maxGSSize"  type="integer" value="500" label="Display only GO terms with a maximum number of genes of :"   help="Maximal size of background  genes annotated by Ontology for testing. If you want all, put the size of your background"></param>
+    </inputs>
+    <outputs>
+        <data format="xls" name="output1" label="${tool.name}" />
+        <data format="html" name="output2" label="${tool.name}" />
+    </outputs>
+    <help><![CDATA[
+
+
+**Description**
+
+
+This tool is based on R package clusterProfiler and allows to compute
+GO terms enrichment analyses on gene sets or protein sets to find which
+GO terms are over-represented (or under-represented) compared to a
+background corresponding to a user-defined
+list.
+
+-----
+
+**Input**
+
+List of set of ID genes/proteins in xls file
+List of ID genes/proteins background in xls file
+
+-----
+
+**Output**
+
+
+A HTML report with a table containing the over-represented GO terms and some graphics
+
+
+-----
+
+
+**Authors**
+
+G Yu, LG Wang, Y Han, QY He. clusterProfiler: an R package for comparing biological themes among gene clusters.
+
+OMICS: A Journal of Integrative Biology 2012, 16(5):284-287. doi:[10.1089/omi.2011.0118](http://dx.doi.org/10.1089/omi.2011.0118)
+
+
+User manual / Documentation of the clusterProfiler R package (functions and parameters):
+
+https://bioconductor.org/packages/3.7/bioc/vignettes/clusterProfiler/inst/doc/clusterProfiler.html
+
+
+-----
+
+
+.. class:: infomark
+
+
+**Galaxy integration**
+
+    Ilyess RACHEDI, Samuel GRANJEAUD's student intern at
+    Centre de Recherche en Cancérologie de Marseille (CRCM), France
+    27 Boulevard Lei Roure, 13009 Marseille
+
+
+    ]]></help>
+</tool>

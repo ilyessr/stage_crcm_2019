@@ -1,0 +1,144 @@
+---
+title: "KEGG Gene Set Enrichment Analysis (GSEA)"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: pygments
+    self_contained: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=20, fig.height=16, echo = FALSE)
+```
+
+```{r upload_libraries, include=FALSE}
+library(clusterProfiler)
+library(enrichplot)
+library(fgsea)
+library(DOSE)
+library(DT)
+library(tools)
+library(readxl)
+```
+
+
+```{r Loading_variables, include=FALSE}
+arg= commandArgs(trailingOnly=TRUE)
+
+# arg = c("/home/rachedi/Bureau/stage/190523-Ilyess/protein_enrichment/LFQ_normalise example.xlsx","hsa", "uniprot", 1000 ,10 ,500, 0.05 ,"BH", 10, 2, 4, "kegg_enrich.csv", FALSE)
+header <- as.logical(arg[13])
+file = arg[1]
+data_frame <- read_excel(file)
+organism <- arg[2]
+keyType <-  arg[3]
+nPerm   <-  as.numeric(arg[4])
+minGSSize <- as.numeric(arg[5])
+maxGSSize <- as.numeric(arg[6])
+pvalueCutoff <- as.numeric(arg[7])
+pAdjustMethod <- arg[8]
+showCategory <- as.numeric(arg[9])
+column_ID <- as.numeric(arg[10])
+column_expr <- as.numeric(arg[11])
+path_csv <- arg[12]
+expr_order <- order(data_frame[,column_expr, drop=TRUE], decreasing = T)
+geneList <- data_frame[expr_order,column_expr, drop=TRUE]
+names(geneList) <- data_frame[expr_order,column_ID, drop=TRUE]
+
+
+```
+
+## Gene Set Enrichment Analysis of KEGG
+```{r gseKEGGfi}
+if (keyType == "NA"){ # if keyType is not given
+  gke = gseKEGG(geneList, 
+            organism = organism, 
+            exponent = 1,
+            nPerm = nPerm, 
+            minGSSize = minGSSize,
+            maxGSSize = maxGSSize,
+            pvalueCutoff = pvalueCutoff, 
+            pAdjustMethod = pAdjustMethod, 
+            verbose = FALSE,
+            use_internal_data = FALSE, 
+            by = "fgsea")
+  } else {
+  gke = gseKEGG(geneList, 
+            organism = organism, 
+            keyType = keyType,
+            exponent = 1,
+            nPerm = nPerm, 
+            minGSSize = minGSSize,
+            maxGSSize = maxGSSize,
+            pvalueCutoff = pvalueCutoff, 
+            pAdjustMethod = pAdjustMethod, 
+            verbose = FALSE,
+            use_internal_data = FALSE, 
+            by = "fgsea")
+}
+
+
+```
+
+```{r Write_table}
+gke_df = as.data.frame(gke)
+rownames(gke_df) <- 1:nrow(gke_df)
+
+gke_df[,4:8] <- sapply(gke_df[,4:8], function(x) format(as.numeric(x),digits = 5))
+
+datatable(gke_df,
+          class = "nowrap",
+          options = list(
+          searching = T,
+          scrollX = TRUE,
+          crollCollapse = TRUE),
+         )
+
+write.csv2(gke_df, path_csv, row.names= F)
+
+# If user give number of catégorie to display bigger than the results
+if ( nrow(gke_df) < showCategory ){
+  showCategory <- nrow(gke_df)
+}
+```
+
+
+## Dotplot
+```{r Dotplot, message =FALSE, fig.height=8, fig.width=12}
+dotplot(gke,color="pvalue" ,  showCategory  = showCategory)
+```
+
+## Gene-Concept Network
+```{r Cneplot, fig.width=24, fig.height=20}
+cnetplot(gke, showCategory = showCategory)
+```
+
+## Heatmap-like functional classification
+Please download the picture to see better the graphic
+```{r Heatmap ,fig.height=5, fig.width=70}
+heatplot(gke, showCategory = showCategory )
+```
+
+## Ridgeline plot for expression distribution of GSEA result
+```{r ridgeplot }
+ridgeplot(gke,fill = "pvalue", showCategory = 30)
+
+```
+
+## Gseaplot : Running Score & Preranked List
+```{r}
+for ( i in 1:showCategory) {
+  cat(sprintf("geneSetID = %d, title = %s", i, gke$Description[i]))
+  print(gseaplot(gke, geneSetID = i, title = gke$Description[i]))
+}
+```
+
+## Gseaplot : Multiple gene sets
+```{r}
+gseaplot2(gke, geneSetID = 1:showCategory)
+```
+
+

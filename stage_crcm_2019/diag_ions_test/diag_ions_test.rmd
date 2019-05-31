@@ -1,0 +1,209 @@
+---
+title: "Diagnostic Ions Test"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: pygments
+    self_contained: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+```
+
+
+```{r function}
+library(MSnbase)
+library(DT)
+library(RColorBrewer)
+library(reshape2)
+library(ggplot2)
+library(R.utils)
+
+### findSpectreGmf needs to arguments
+### - mgf is the path of the mfg file to analyze
+### - listlistmZ  is  a list contain a set of mass-to-charge ratio to search
+###  - tol is the tolerance (ppm)
+### Return a dataframe containing all the pics for each spectrum
+findSpectrGmf <-function(mgf, listmZ, tol)
+{
+  mgf<- readMgfData(mgf)
+  dfMGF <- fData(mgf)
+  nbrSp<- nrow(dfMGF)
+  dfSp <-  data.frame()
+  listSp <-  c()
+  agg <- c()
+  for (i in seq(nbrSp)) { # For each spectrum, we look for all the diagnostic ions
+    sp <- mgf[[i]]    # Current spectrum        
+    for (current_mz in listmZ) { 
+      vectMZ  <- mz(sp)
+      res <- (abs(vectMZ - current_mz) / vectMZ) <= tol * 10^(-6)
+        if (any(res)) {     # If the mz of interest is in the mz of the spectrum  
+          # First element of the row 
+          scan_index <- scanIndex(sp)
+          spectre <- subset(dfMGF, SCANS == scan_index)
+          rtime <- as.numeric(as.character(spectre$RTINSECONDS))
+          title <- as.character(spectre$TITLE)
+          ion <- current_mz
+          # Second column of the row 
+          mz <- as.numeric(vectMZ[res])
+          # Third column of the row 
+          intensity<-as.numeric(intensity(sp)[res])
+          # Bind
+          dfSp <- rbind.data.frame(dfSp, data.frame(title, scan_index, mz, intensity, rtime, ion)) # Add in vector of spectrums of interest
+          listSp <- c(listSp, sp)
+          } 
+    }
+  }
+  return(list(dfSp = dfSp, listSp = unique(listSp), dfMGF = dfMGF))
+}
+```
+
+
+```{r Variables, include =F}
+arg <- commandArgs(trailingOnly=TRUE)
+# arg <- c("toto.mgf" , 3000, "105.00704X144.87128")
+arg <- c("/home/rachedi/Bureau/stage/190523-Ilyess/ions_diagnostics_glucnac/Crystalline.mgf" , 100, "204.0866X186.0760X168.0655X144.0655X138.0549X126.0549", "/home/rachedi/Bureau/stage/galaxy/readMGFData/test.txt")
+# arg <- c("toto.mgf" , 3000, "/home/rachedi/Bureau/stage/galaxy/readMGFData/di.txt", "/home/rachedi/Bureau/stage/galaxy/readMGFData/test.txt")
+
+file <- arg[1]
+tolerance <- as.numeric(arg[2])
+if (isFile(arg[3])){
+  listmZ <- as.numeric(read.table(arg[3])$V1)
+} else {
+  listmZ <- as.numeric(unlist(strsplit(arg[3],"X"))) # In Galaxy, semicolon are remplaced by X
+}
+
+result <- findSpectrGmf(file,listmZ,tolerance)
+dfSp   <- result$dfSp # Data frame containing some informations about the mfg file
+listSp <-result$listSp # Spectrums containing diagnostic ions
+dfMGF  <- result$dfMGF # Spectrums containing diagnostic ions
+if (length(listmZ) > 1){
+  xmin <-  min(listmZ) - (min(listmZ) * 0.1) # Delimite the xmax of plots
+} else {
+  xmin = 0
+}
+
+xmax <-  max(listmZ) + (max(listmZ) * 0.1) # Delimite the xmax of plots
+ionsMz <- split(dfSp$mz,dfSp$title) # mz of diagnostic ions found close to those of the list
+ionsIntensity <- split(dfSp$intensity,dfSp$title) # mz of diagnostic ions found close to those of the list
+
+```
+
+## MGF features
+```{r MGF_features}
+cat("Number of spectrums in file :", nrow(dfMGF), "\n")
+datatable(dfMGF,
+          class = "nowrap",
+          options = list(
+            searching = T,
+            scrollX = TRUE),
+         )
+```
+
+## Spectrums with the diagnostic ions of interest
+```{r Result1}
+cat("List of diagnostic ions :", as.character(listmZ), "\n")
+cat("Tolerance:", as.character(tolerance), "ppm")
+datatable(dfSp,
+          class = "nowrap",
+          options = list(
+            searching = T,
+            scrollX = TRUE),
+         ) 
+```
+
+
+## Presence of diagnostic ions according to time
+```{r fig.height=7, fig.width=9}
+ggplot(dfSp, aes(x = rtime, y = intensity)) + geom_line() + facet_wrap(~ion) + scale_y_sqrt()
+```
+
+
+## Table
+
+0 : absent
+1 : present
+```{r table}
+# Pivot table with reshape2 package
+dfSPPivot <- dcast(data = dfSp, formula = title ~ ion, fill = 0, value.var = "intensity")
+# Name rows with title column
+title <- as.character(dfSPPivot$title)
+rownames(dfSPPivot) <- title
+# Remove title column
+dfSPPivot <- dfSPPivot[,2:ncol(dfSPPivot)]
+# Set 1 when a spectrum contains diagnotic ion
+dfSPPivot[dfSPPivot>1] = 1
+#  Added all the 1 by row
+Total<- rowSums(dfSPPivot[,1:ncol(dfSPPivot)])
+# Added  total columns
+dfSPPivot <-cbind(dfSPPivot, Total)
+
+datatable(dfSPPivot,
+          class = "nowrap",
+          options = list(
+            searching = T,
+            scrollX = TRUE),
+         )
+
+```
+
+## Heatmap
+```{r heatmap, fig.height=7, fig.width=15}
+# Transformation into a matrix if the number diagnostic ions is not too big
+
+if (length(listSp) <= 50) {
+  
+  mat <- as.matrix(dfSPPivot)
+  pal <-  colorRampPalette(c("antiquewhite1","antiquewhite2", "antiquewhite3", "antiquewhite4" ))(n = 299)
+  heatmap(mat[, -ncol(mat)], cexRow = 0.8, cexCol = 0.8, scale = "none", col = pal)
+} else {
+  cat("Too much diagnostic ions found to create a heatmap")
+}
+```
+
+## Visualization
+```{r ggplots}
+
+# Visualization of plot m/z / intensity  if the number of diagnostic ions is not too big
+if (length(listSp) <= 50) {
+  titleSp <- as.character(unique(dfSp$title))
+  plt = lapply(listSp, plot) # Get all the plots of the spectrums with diagnostic ions
+  cat("Number of spectrum :", length(listSp), "\n\n\n")
+  for (i in 1:length(listSp)) {
+    cat("Ref:",titleSp[[i]], "\n")
+    cat("Precursor ion MZ value :" , precursorMz(listSp[[i]]), "\n")
+    cat("Diagnostic ion(s) - M/Z       :", ionsMz[[i]], "\n")
+    cat("Diagnostic ion(s) - Intensity :",ionsIntensity[[i]], "\n")
+    print(plt[[i]] +  coord_cartesian(xlim = c(xmin,xmax)) + geom_vline(xintercept = ionsMz[[i]], col ="red", size=2,  alpha=0.2))
+  }
+} else { # Visualisation of all spectrums containing all diagnostics ions
+  all_scan <- sapply(listSp, scanIndex) # Contain all scan index of spectrum of interest
+  list_scan <- as.numeric(gsub(".+scans: (\\d+)", "\\1", rownames(subset(dfSPPivot, Total == length(listmZ)))))
+  
+  sp_plot <- listSp[all_scan %in% list_scan]
+  
+  titleSp <- as.character(unique(dfSp$title))
+  plt = lapply(sp_plot, plot) # Get all the plots of the spectrums with diagnostic ions
+  cat("Number of spectrum with all diagnostic ions :", length(sp_plot), "\n\n\n")
+  for (i in 1:length(sp_plot)) {
+    cat("Ref:",titleSp[[i]], "\n")
+    cat("Precursor ion MZ value :" , precursorMz(listSp[[i]]), "\n")
+    cat("Diagnostic ion(s) - M/Z       :", ionsMz[[i]], "\n")
+    cat("Diagnostic ion(s) - Intensity :",ionsIntensity[[i]], "\n")
+    print(plt[[i]] +  coord_cartesian(xlim = c(xmin,xmax)) + geom_vline(xintercept = listmZ, col ="red", size=2,  alpha=0.2))
+  }
+}
+
+
+
+
+```
+
+
+

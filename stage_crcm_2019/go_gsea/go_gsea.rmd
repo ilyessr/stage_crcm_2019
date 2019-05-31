@@ -1,0 +1,129 @@
+---
+title: " GO Gene Set Enrichment Analysis (GSEA)"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: pygments
+    self_contained: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=20, fig.height=16, echo = FALSE)
+```
+
+```{r upload_libraries, include=FALSE, message = FALSE, warning = FALSE }
+library(clusterProfiler)
+library(enrichplot)
+library(fgsea)
+library(DT) 
+library(tools)
+library(readxl)
+```
+
+
+```{r Loading_variables}
+arg= commandArgs(trailingOnly=TRUE)
+# arg = c("dose_gene_expression.txt", "BP" ,"org.Hs.eg.db", "ENTREZID" ,1000 ,100 ,500 ,0.05, "BH", 10, 1 ,2 ,"go_gsea.csv", T )
+# arg = c("/home/rachedi/Bureau/stage/190523-Ilyess/protein_enrichment/LFQ_normalise example.xlsx", "BP" ,"org.Hs.eg.db", "UNIPROT" ,1000 ,50 ,500 ,0.2, "BH", 10, 2 ,4 ,"go_gsea.csv", T )
+header <- as.logical(arg[14])
+file = arg[1]
+data_frame <- read_excel(file)
+ont <- arg[2]
+OrgDb <- arg[3]
+keyType <-  arg[4]
+nPerm   <-  as.numeric(arg[5])
+minGSSize <- as.numeric(arg[6])
+maxGSSize <- as.numeric(arg[7])
+pvalueCutoff <- as.numeric(arg[8])
+pAdjustMethod <- arg[9]
+showCategory <- as.numeric(arg[10])
+column_ID <- as.numeric(arg[11])
+column_expr <- as.numeric(arg[12])
+path_csv <- arg[13]
+expr_order <- order(data_frame[,column_expr, drop=TRUE], decreasing = T)
+geneList <- data_frame[expr_order,column_expr, drop=TRUE]
+names(geneList) <- data_frame[expr_order,column_ID, drop=TRUE]
+```
+
+## Gene Set Enrichment Analysis of GO
+```{r gseGO, include = FALSE}
+ego = gseGO(geneList = geneList, 
+            ont = ont,
+            OrgDb = OrgDb, 
+            keyType = keyType,
+            exponent = 1,
+            nPerm = nPerm, 
+            minGSSize = minGSSize,
+            maxGSSize = maxGSSize,
+            pvalueCutoff = pvalueCutoff, 
+            pAdjustMethod = pAdjustMethod, 
+            verbose = FALSE,
+            by = "fgsea")
+
+
+```
+
+```{r Write_table}
+ego_df = as.data.frame(ego)
+rownames(ego_df) <- 1:nrow(ego_df)
+
+# If user give number of catégorie to display bigger than the results
+if ( nrow(ego_df) < showCategory ){
+  showCategory <- nrow(ego_df)
+}
+
+ego_df[,4:8] <- sapply(ego_df[,4:8], function(x) format(as.numeric(x),digits = 5))
+
+datatable(ego_df,
+          class = "nowrap",
+          options = list(
+          searching = T,
+          scrollX = TRUE,
+          crollCollapse = TRUE),
+         )
+
+write.csv2(ego_df, path_csv, row.names= F)
+```
+
+## Dotplot
+```{r Dotplot, include = FALSE,  fig.height=8, fig.width=12}
+dotplot(ego,color="pvalue" , showCategory  = showCategory)
+```
+## Heatmap-like functional classification
+```{r }
+emapplot(ego, color="pvalue", showCategory = showCategory )
+```
+
+## Gene-Concept Network
+```{r Cneplot, fig.width=24, fig.height=20}
+cnetplot(ego, showCategory = showCategory)
+```
+
+## Heatmap-like functional classification
+```{r fig.height=5, fig.width=70}
+heatplot(ego, showCategory = 5 )
+```
+
+## Ridgeline plot for expression distribution of GSEA result
+```{r ridgeplot }
+ridgeplot(ego,fill = "pvalue", showCategory = min(showCategory,30))
+```
+
+## Gseaplot : Running Score & Preranked List
+```{r}
+par(mfrow = c(2,5))
+for ( i in 1:showCategory) {
+  cat(sprintf("geneSetID = %d, title = %s", i, ego$Description[i]))
+  print(gseaplot(ego, geneSetID = i, title = ego$Description[i]))
+}
+```
+
+
+```{r}
+gseaplot2(ego, geneSetID = 1:showCategory)
+```

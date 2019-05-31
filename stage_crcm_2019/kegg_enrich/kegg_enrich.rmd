@@ -1,0 +1,152 @@
+---
+title: "KEGG Enrichment"
+output:
+  html_document:
+    fig_caption: yes
+    highlight: pygments
+    self_contained: yes
+    theme: spacelab
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, echo = FALSE)
+```
+
+```{r Loading_libraries ,echo = FALSE, include = FALSE, message = FALSE, warning = FALSE }
+library(clusterProfiler)
+library(formattable)
+library(DT)
+library(tools)
+library(readxl)
+```
+
+
+```{r Loading_variables}
+arg <-  commandArgs(trailingOnly=TRUE)
+# arg <- c("/home/rachedi/Bureau/stage/galaxy/script_galaxy/gene_set_uniprot2.xls", "hsa", "uniprot", 0.05, "BH", "/home/rachedi/Bureau/stage/galaxy/script_galaxy/bg_uniprot2.xls", 10, 500, 0.05,"F", 5, FALSE, FALSE, 1, 1)
+
+header1 <- as.logical(arg[12])
+header2 <- as.logical(arg[13])
+column_ID1 <- as.numeric(arg[14])
+column_ID2 <- as.numeric(arg[15])
+
+# gene
+file = arg[1]
+gene_data <- read_excel(file) 
+gene <- gene_data[,column_ID1, drop=TRUE]
+# organism
+organism  <- arg[2] # Required. Selection
+#keyType
+keyType   <- arg[3] # Keytype of input gene
+# pvalueCutoff
+pvalueCutoff  <- as.numeric(arg[4]) # Required. Float
+# pAdjustMethod
+pAdjustMethod <- arg[5] # Selection. one of "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"
+# universe
+universe_data <- read_excel(arg[6])# Background genes. File. Optionnal
+universe <- universe_data[, column_ID2, drop=TRUE]
+# minGSSize
+minGSSize     <- as.numeric(arg[7])  # Integer. minimal size of genes annotated by Ontology term for testing
+#maxGSSize
+maxGSSize     <- as.numeric(arg[8]) # Integer. maximal size of genes annotated for testing
+# qvalueCutoff
+qvalueCutoff  <- as.numeric(arg[9])  # Float qvalue cutoff
+output_csv    <- arg[10]
+showCategory  <- as.numeric(arg[11])
+```
+
+## KEGG over-representation
+```{r enrichKEGG}
+
+if (keyType == "NA"){ # if keyType is not given
+  kk <- enrichKEGG(gene     = gene ,
+                organism  = organism,
+                pvalueCutoff  = pvalueCutoff,
+                pAdjustMethod = pAdjustMethod,
+                universe      = universe,
+                qvalueCutoff  = qvalueCutoff,
+                minGSSize = minGSSize,
+                maxGSSize = maxGSSize,
+                use_internal_data = F)
+} else {
+    kk <- enrichKEGG(gene     = gene ,
+                organism  = organism,
+                keyType   = keyType,
+                pvalueCutoff  = pvalueCutoff,
+                pAdjustMethod = pAdjustMethod,
+                universe      = universe,
+                qvalueCutoff  = qvalueCutoff,
+                minGSSize = minGSSize,
+                maxGSSize = maxGSSize,
+                use_internal_data = F)
+}
+
+
+```
+
+
+```{r}
+
+kk_df = as.data.frame(kk)
+rownames(kk_df ) <- 1:nrow(kk_df )
+
+# Add column converting GeneRatio to decimal
+frac  <- kk_df$GeneRatio
+GenePercent <-sapply(frac, function(x) percent(eval(parse(text=as.character(x)))))
+# Add column converting BgRatio to decimal
+frac  <-  kk_df$BgRatio
+BgPercent <-sapply(frac, function(x) percent(eval(parse(text=as.character(x)))))
+## Bind these columns to the dataframe
+kk_df <- cbind(kk_df,GenePercent,BgPercent)
+# Change the order of the columns
+kk_df <- kk_df[,c("ID","Description","GeneRatio","BgRatio","GenePercent","BgPercent","pvalue", "p.adjust", "qvalue","Count","geneID")]
+# Round the decimals
+kk_df[,7:9] <- sapply(kk_df[,7:9], function(x) format(as.numeric(x),digits = 5))
+# Table
+datatable(kk_df,
+          class = "nowrap",
+          options = list(
+            searching = T,
+            scrollX = TRUE,
+            scrollCollapse = TRUE),
+         )
+# Write Csv version
+write.csv2(kk_df, output_csv, row.names= F)
+
+# If user give number of catégorie to display bigger than the results
+if ( nrow(kk_df) < showCategory ){
+  showCategory <- nrow(kk_df)
+}
+
+```
+
+## Barplot
+```{r}
+barplot(kk, showCategory = showCategory)
+```
+
+## Dotplot
+```{r dotplot,  message =FALSE,}
+dotplot(kk, color="pvalue" , showCategory = showCategory )
+```
+
+## Gene-Concept Network
+```{r cnetplot }
+cnetplot(kk, showCategory = showCategory, colorEdge = TRUE)
+```
+
+## Heatmap-like functional classification
+```{r heatplot }
+heatplot(kk, showCategory = showCategory)
+```
+
+## Enrichment Map
+```{r emapplot}
+emapplot(kk , showCategory = showCategory)
+```
+
+
+
