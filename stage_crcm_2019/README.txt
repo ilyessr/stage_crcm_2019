@@ -16,7 +16,7 @@ Ces outils sont destinés à être intégrer sur Galaxy. Vous pouvez donc les in
 
 
 
-Il faudra penser à installer sur R (3.5>) les packages MSnbase, clusterProfiler, DT, enrichplot, fgsea, tools, readxl ainsi qu'avoir la dernière version de pandoc.
+Il faudra penser à installer sur R (3.5>) les packages MSnbase, clusterProfiler, DT, enrichplot, tools, readxl ainsi qu'avoir la dernière version de pandoc.
 
 Vous trouverez dans chaque dossier un READ.ME concernant l'outil en question
 
