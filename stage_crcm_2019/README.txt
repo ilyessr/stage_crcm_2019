@@ -1,5 +1,13 @@
-Tout mon travail a été fait dans une image Docker. Ici, vous pouvez retrouver les différents outils que j'ai crée.
-Ces outils sont destinés à être intégrer sur Galaxy. Vous pouvez donc les installer sans avoir besoin de Docker. Par contre l'installation de Galaxy est bien evidemment nécessaire. Pour intégrer ces outils, il suffit de déplacer les six dossiers dans le dossier tools de votre Galaxy personnel et ajouter ces lignes dans le tool_conf.xml.sample : 
+All my work was done in a Docker image. Here you can find the six tools that I created :
+- GO GSEA
+- KEGG GSEA
+- GO over-representation test
+- KEGG over-representation test
+- Diagnostic ions test (mass spectrometry)
+- Formatting fasta files
+
+These tools are intended to be integrated on Galaxy. So you can install them without needing Docker but you need Galaxy. 
+To integrate these tools, simply move the six folders in the tools folder of your personal Galaxy and add these lines in the tool_conf.xml.sample:
 
   <section id="fasta_format_section" name="Fasta Format">
     <tool file="fasta_format/fasta_format.xml" />
@@ -15,10 +23,17 @@ Ces outils sont destinés à être intégrer sur Galaxy. Vous pouvez donc les in
   </section>
 
 
+Necessary packages R (3.5>) :
 
-Il faudra penser à installer sur R (3.5>) les packages MSnbase, clusterProfiler, DT, enrichplot, tools, readxl ainsi qu'avoir la dernière version de pandoc.
+- MSnbase
+- clusterProfiler
+- DT
+- enrichplot
+- tools 
+- readxl
+- the latest version of pandoc.
 
-Vous trouverez dans chaque dossier un READ.ME concernant l'outil en question
+You will find in each folder a READ.ME concerning the tool in question.
 
 
 
